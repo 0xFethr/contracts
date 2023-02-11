@@ -10,6 +10,7 @@ contract MainContract {
     Post[] public allPosts;
     mapping(address => User) public allUsers;
     mapping(bytes32 => mapping(address =>bool))roleMapping;
+    mapping(address => mapping(uint  => bool)) viewedPosts;
     bytes32 constant ADMIN = keccak256(abi.encodePacked("ADMIN"));
     bytes32 constant COOWNER = keccak256(abi.encodePacked("COOWNER"));
     error UserAlreadyPresent();
@@ -110,7 +111,6 @@ contract MainContract {
         uint size=0;
         for(uint i=0;i<n;++i){
             if(!allPosts[i].takenDown)size++;
-
         }
         Post [] memory res = new Post[](n) ; 
         uint itr=0;
@@ -119,9 +119,7 @@ contract MainContract {
                 res[itr] = allPosts[itr];
                 itr++;
             }
-
         }
-
         return res;
     }
 
@@ -137,7 +135,31 @@ contract MainContract {
         payable(msg.sender).call{value : amount}("");
     }
 
- 
-    
+    function addView(uint _post ) public {
+        viewedPosts[msg.sender][_post] = true;
+        getPost(_post).views++;
+
+    }
+
+    function getAllViewedPosts() public returns(uint [] memory){
+        uint count=0;
+        for(uint i=0;i<currPostID.current();++i){
+            if(!getPost(i).takenDown && viewedPosts[msg.sender][i]){
+                count++;
+            }
+        }
+
+        uint [] memory res = new uint[](count);
+        uint itr =0;
+        for(uint i=0;i<currPostID.current();++i){
+            if(!getPost(i).takenDown && viewedPosts[msg.sender][i]){
+                res[itr] = i;
+            }
+        }
+
+        return res;
+    }
+
+
 
 }
