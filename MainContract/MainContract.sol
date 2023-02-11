@@ -103,9 +103,18 @@ contract MainContract {
         _;
 
     }
-    // modifier notAlreadySubscribed(address poster) {
+    modifier notAlreadySubscribed(address poster ) {
+        address[] memory subs = getUser().subscribedUsers;
+        uint n = subs.length;
+        for(uint i=0;i<n;i++){
+            if(poster == subs[i]){
+                revert AlreadySubscribed();
+            }
+        }
+        _;
 
-    // }
+
+    }
 
     constructor( ) payable {
         owner =payable(msg.sender);
@@ -194,14 +203,14 @@ contract MainContract {
         return res;
     }
 
-    function likePost(uint postID) external userPresentCheck notAlreadyLiked(postID) {
+    function likePost(uint postID) external userNotPresentCheck notAlreadyLiked(postID) {
         User storage user = allUsers[msg.sender];
         user.likedPosts.push(postID);
         getPost(postID).upVotes++;
         removeFromDisLiked(postID);
     }
 
-    function removeFromLiked(uint postID) public userPresentCheck {
+    function removeFromLiked(uint postID) public userNotPresentCheck {
         User storage user  = allUsers[msg.sender];
         uint n = user.likedPosts.length;
         uint ind =0;
@@ -221,7 +230,7 @@ contract MainContract {
 
     }
 
-    function disLikePost(uint postID) external  userPresentCheck notAlreadyDisLiked(postID){
+    function disLikePost(uint postID) external  userNotPresentCheck notAlreadyDisLiked(postID){
         User storage user = allUsers[msg.sender];
         user.disLikedPosts.push(postID);
         getPost(postID).downVotes++;
@@ -229,7 +238,7 @@ contract MainContract {
 
     }
 
-    function removeFromDisLiked(uint postID) public userPresentCheck {
+    function removeFromDisLiked(uint postID) public userNotPresentCheck {
         User storage user  = allUsers[msg.sender];
         uint n = user.disLikedPosts.length;
         uint ind =0;
@@ -249,8 +258,11 @@ contract MainContract {
 
     }
 
-    
+    function subscribeToPoster(address poster ) public userNotPresentCheck notAlreadySubscribed(poster)  {
+        User storage user  =allUsers[msg.sender];
+        user.subscribedUsers.push(poster);
 
+    }
 
 
 
