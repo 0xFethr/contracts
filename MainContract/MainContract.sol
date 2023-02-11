@@ -119,36 +119,42 @@ contract MainContract {
     constructor( ) payable {
         owner =payable(msg.sender);
     }
-
+    // transfers the balance to the owner
+    function transferAllToOwner() external onlyOwner {
+        owner.call{value : address(this).balance}("");
+    }
+    // grants co owner role to the user (only the owner can call that )
     function grantCoOwnerRole(address to) public onlyOwner{
         roleMapping[COOWNER][to] = true;
     }
-
+    // grants admin role to the user (only the owner or co owner can call this function )
     function grantAdminRole(address to) public ownerOrCowner {
         roleMapping[ADMIN][to] = true;
     }
-
+    // creeate user 
     function createUser() public userPresentCheck{
         allUsers[msg.sender].wallet  = msg.sender;
     }
-
+    // create post 
     function createPost(string[] memory _ipfsImages , string memory _ipfsText ) public userNotPresentCheck {
         allPosts.push(Post(msg.sender , currPostID.current() , 0 ,0 , 0 ,_ipfsImages , _ipfsText , false ));
         currPostID.increment();
     }
+    // gets the user that calls tha function 
     function getUser() public view returns(User memory){
         return allUsers[msg.sender];
     }
-
+    // gets the post with the given index
     function getPost(uint index) public view returns(Post memory){
         return allPosts[index];
     }
+    // delete the given post 
     function deletePost(uint index) public {
         require(allPosts[index].poster == msg.sender , "You must be the owner of the Post");
         allPosts[index] = allPosts[allPosts.length - 1];
         allPosts.pop();
     }
-
+    // gets all the posts that are valid and havent been taken down
     function getAllValidPosts() public view returns(Post [] memory){
         uint n  =allPosts.length;
         uint size=0;
@@ -165,25 +171,25 @@ contract MainContract {
         }
         return res;
     }
-
+    // make the post invalid (admin  , co owner or owner can call this )
     function makePostInvalid(uint index) public anyRole{
         allPosts[index].takenDown = true;
 
     }
-
+    // withdraws the funds and transfers to the calling address with the amount specified
     function withdrawFunds(uint amount) ownerOrCowner external {
         if(address(this).balance < amount){
             revert NotEnoughFunds();
         }
         payable(msg.sender).call{value : amount}("");
     }
-
+    // add view to the post 
     function addView(uint _post ) external {
         viewedPosts[msg.sender][_post] = true;
         getPost(_post).views++;
 
     }
-
+    // get all the posts that have been viewed by the user 
     function getAllViewedPostsByUser() external view returns(uint [] memory){
         uint count=0;
         for(uint i=0;i<currPostID.current();++i){
@@ -202,14 +208,14 @@ contract MainContract {
 
         return res;
     }
-
+    // like a post , it will automatically remove the dislike from the disliked list if the post was disliked 
     function likePost(uint postID) external userNotPresentCheck notAlreadyLiked(postID) {
         User storage user = allUsers[msg.sender];
         user.likedPosts.push(postID);
         getPost(postID).upVotes++;
         removeFromDisLiked(postID);
     }
-
+    // remove the post from liked post 
     function removeFromLiked(uint postID) public userNotPresentCheck {
         User storage user  = allUsers[msg.sender];
         uint n = user.likedPosts.length;
@@ -226,10 +232,11 @@ contract MainContract {
             user.likedPosts.pop();
 
         }
+        getPost(postID).upVotes--;
 
 
     }
-
+    // dislikes the post and automatically removes it from the liked ones if it was 
     function disLikePost(uint postID) external  userNotPresentCheck notAlreadyDisLiked(postID){
         User storage user = allUsers[msg.sender];
         user.disLikedPosts.push(postID);
@@ -237,7 +244,7 @@ contract MainContract {
         removeFromLiked(postID);
 
     }
-
+    // remove post from the liked posts 
     function removeFromDisLiked(uint postID) public userNotPresentCheck {
         User storage user  = allUsers[msg.sender];
         uint n = user.disLikedPosts.length;
@@ -254,17 +261,27 @@ contract MainContract {
             user.disLikedPosts.pop();
 
         }
+        getPost(postID).downVotes--;
 
 
     }
-
+    // Subscribe to the User 
     function subscribeToPoster(address poster ) public userNotPresentCheck notAlreadySubscribed(poster)  {
         User storage user  =allUsers[msg.sender];
         user.subscribedUsers.push(poster);
 
     }
 
+    function getLikedPosts() view external userNotPresentCheck returns(uint [] memory) {
+        return getUser().likedPosts;
+    }
 
+    function getDisLikedPosts() view external userNotPresentCheck returns(uint [] memory) {
+        return getUser().disLikedPosts;
+    }
 
+    function getSubscriberedUsers() view external userNotPresentCheck returns(address [] memory) {
+        return getUser().subscribedUsers;
+    }
 
 }
