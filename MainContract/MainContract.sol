@@ -1,26 +1,33 @@
 // SPDX-License-Identifier: MIT
-
 import "@openzeppelin/contracts/utils/Counters.sol";
 pragma solidity 0.8.14;
 
 contract MainContract {
+
     using Counters for Counters.Counter;
     Counters.Counter public currPostID;
     address  payable immutable public owner;
     Post[] public allPosts;
+
     mapping(address => User) public allUsers;
     mapping(bytes32 => mapping(address =>bool))roleMapping;
     mapping(address => mapping(uint  => bool)) viewedPosts;
+
     bytes32 constant ADMIN = keccak256(abi.encodePacked("ADMIN"));
     bytes32 constant COOWNER = keccak256(abi.encodePacked("COOWNER"));
+
     error UserAlreadyPresent();
     error UserNotPresent();
     error NotOwner();
     error NotTheRequiredRole();
     error NotEnoughFunds();
+    error AlreadyLiked();
+    error AlreadyDisLiked();
+
     struct User {
         address wallet;
         uint [] likedPosts;
+        uint [] disLikedPosts;
         address[] subscribedUsers;
     }
 
@@ -44,7 +51,7 @@ contract MainContract {
         _;
     }
 
-    modifier ownerOrCowner(){
+    modifier ownerOrCowner{
         if(!roleMapping[COOWNER][msg.sender] || msg.sender == owner){
             revert NotTheRequiredRole();
         }
@@ -72,6 +79,30 @@ contract MainContract {
         _;
     }
 
+    modifier notAlreadyLiked(uint postID) {
+        User memory user = allUsers[msg.sender];
+        uint n  = user.likedPosts.length;
+        for(uint i=0;i<n;++i){
+            if(user.likedPosts[i] == postID){
+                revert AlreadyLiked();
+            }
+        }
+        _;
+
+    }
+
+    modifier notAlreadyDisLiked(uint postID) {
+        User memory user = allUsers[msg.sender];
+        uint n  = user.disLikedPosts.length;
+        for(uint i=0;i<n;++i){
+            if(user.disLikedPosts[i] == postID){
+                revert AlreadyDisLiked();
+            }
+        }
+        _;
+
+    }
+
     constructor( ) payable {
         owner =payable(msg.sender);
     }
@@ -86,12 +117,11 @@ contract MainContract {
 
     function createUser() public userPresentCheck{
         allUsers[msg.sender].wallet  = msg.sender;
-        allUsers[msg.sender].likedPosts.push(0); 
-        allUsers[msg.sender].subscribedUsers.push(address(0));
     }
 
     function createPost(string[] memory _ipfsImages , string memory _ipfsText ) public userNotPresentCheck {
         allPosts.push(Post(msg.sender , currPostID.current() , 0 ,0 , 0 ,_ipfsImages , _ipfsText , false ));
+        currPostID.increment();
     }
     function getUser() public view returns(User memory){
         return allUsers[msg.sender];
@@ -128,20 +158,20 @@ contract MainContract {
 
     }
 
-    function withdrawFunds(uint amount) ownerOrCowner public {
+    function withdrawFunds(uint amount) ownerOrCowner external {
         if(address(this).balance < amount){
             revert NotEnoughFunds();
         }
         payable(msg.sender).call{value : amount}("");
     }
 
-    function addView(uint _post ) public {
+    function addView(uint _post ) external {
         viewedPosts[msg.sender][_post] = true;
         getPost(_post).views++;
 
     }
 
-    function getAllViewedPosts() public returns(uint [] memory){
+    function getAllViewedPostsByUser() external view returns(uint [] memory){
         uint count=0;
         for(uint i=0;i<currPostID.current();++i){
             if(!getPost(i).takenDown && viewedPosts[msg.sender][i]){
@@ -159,6 +189,39 @@ contract MainContract {
 
         return res;
     }
+
+    function likePost(uint postID) external notAlreadyLiked(postID) {
+        User storage user = allUsers[msg.sender];
+        user.likedPosts.push(postID);
+        getPost(postID).upVotes++;
+    }
+
+    function removeFromLiked(uint postID) public userPresentCheck {
+        User storage user  = allUsers[msg.sender];
+        uint n = user.likedPosts.length;
+        uint ind =0;
+        bool flag = false;
+        for(uint i=0;i<n;i++){
+            if(user.likedPosts[i] == postID){
+                flag = true;
+                ind = i;
+            }
+        }
+        if(flag){
+            user.likedPosts[ind]= user.likedPosts[n-1];
+            user.likedPosts.pop();
+
+        }
+
+
+    }
+
+    function disLikePost(uint postID) public {
+        User storage user  = allUsers[msg.sender];
+
+    }
+
+
 
 
 
