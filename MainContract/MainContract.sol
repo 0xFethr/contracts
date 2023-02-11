@@ -190,7 +190,7 @@ contract MainContract {
         return res;
     }
 
-    function likePost(uint postID) external notAlreadyLiked(postID) {
+    function likePost(uint postID) external userPresentCheck notAlreadyLiked(postID) {
         User storage user = allUsers[msg.sender];
         user.likedPosts.push(postID);
         getPost(postID).upVotes++;
@@ -216,8 +216,31 @@ contract MainContract {
 
     }
 
-    function disLikePost(uint postID) public {
+    function disLikePost(uint postID) external  userPresentCheck notAlreadyDisLiked(postID){
+        User storage user = allUsers[msg.sender];
+        user.disLikedPosts.push(postID);
+        getPost(postID).downVotes++;
+        removeFromLiked(postID);
+
+    }
+
+    function removeFromDisLiked(uint postID) public userPresentCheck {
         User storage user  = allUsers[msg.sender];
+        uint n = user.disLikedPosts.length;
+        uint ind =0;
+        bool flag = false;
+        for(uint i=0;i<n;i++){
+            if(user.disLikedPosts[i] == postID){
+                flag = true;
+                ind = i;
+            }
+        }
+        if(flag){
+            user.disLikedPosts[ind]= user.disLikedPosts[n-1];
+            user.disLikedPosts.pop();
+
+        }
+
 
     }
 
