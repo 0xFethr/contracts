@@ -23,6 +23,7 @@ contract MainContract {
     error NotEnoughFunds();
     error AlreadyLiked();
     error AlreadyDisLiked();
+    error AlreadySubscribed();
 
     struct User {
         address wallet;
@@ -102,17 +103,20 @@ contract MainContract {
         _;
 
     }
+    // modifier notAlreadySubscribed(address poster) {
+
+    // }
 
     constructor( ) payable {
         owner =payable(msg.sender);
     }
 
-    function grantCoOwnerRole() public onlyOwner{
-        roleMapping[COOWNER][msg.sender] = true;
+    function grantCoOwnerRole(address to) public onlyOwner{
+        roleMapping[COOWNER][to] = true;
     }
 
-    function grantAdminRole() public ownerOrCowner {
-        roleMapping[ADMIN][msg.sender] = true;
+    function grantAdminRole(address to) public ownerOrCowner {
+        roleMapping[ADMIN][to] = true;
     }
 
     function createUser() public userPresentCheck{
@@ -194,6 +198,7 @@ contract MainContract {
         User storage user = allUsers[msg.sender];
         user.likedPosts.push(postID);
         getPost(postID).upVotes++;
+        removeFromDisLiked(postID);
     }
 
     function removeFromLiked(uint postID) public userPresentCheck {
@@ -243,6 +248,8 @@ contract MainContract {
 
 
     }
+
+    
 
 
 
