@@ -6,6 +6,7 @@ contract MainContract {
 
     using Counters for Counters.Counter;
     Counters.Counter public currPostID;
+    Counters.Counter public userCount;
     address  payable immutable public owner;
     Post[] public allPosts;
 
@@ -134,6 +135,12 @@ contract MainContract {
     // creeate user 
     function createUser() public userPresentCheck{
         allUsers[msg.sender].wallet  = msg.sender;
+        userCount.increment();
+    }
+    // deletes the user 
+    function deleteUser() public userPresentCheck {
+        allUsers[msg.sender].wallet = address(0);
+        userCount.decrement();
     }
     // create post 
     function createPost(string[] memory _ipfsImages , string memory _ipfsText ) public userNotPresentCheck {
@@ -282,6 +289,12 @@ contract MainContract {
 
     function getSubscriberedUsers() view external userNotPresentCheck returns(address [] memory) {
         return getUser().subscribedUsers;
+    }
+
+    function consensusCheck(Post storage tempPost ) internal {
+        if(tempPost.downVotes > userCount.current()/2 ) {
+            tempPost.takenDown = true;
+        }
     }
 
 }
