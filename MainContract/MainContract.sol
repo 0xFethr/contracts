@@ -132,7 +132,7 @@ contract MainContract {
     function grantAdminRole(address to) public ownerOrCowner {
         roleMapping[ADMIN][to] = true;
     }
-    // creeate user 
+    // create user 
     function createUser() public userPresentCheck{
         allUsers[msg.sender].wallet  = msg.sender;
         userCount.increment();
